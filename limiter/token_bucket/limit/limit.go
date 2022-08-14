@@ -21,7 +21,7 @@ const (
 		local capacity = tonumber(ARGV[2])
 		-- 当前时间戳
 		local now = tonumber(ARGV[3])
-		-- 当前请求token数据
+		-- 一次请求token的个数
 		local requested = tonumber(ARGV[4])
 		-- 需要多少秒才能填满桶
 		local fill_time = capacity/rate
@@ -80,9 +80,9 @@ type TokenLimiter struct {
 	burst int
 	// 存储容器
 	store *redis.Client
-	// redis key
+	// redis key，记录桶内令牌剩余容量
 	tokenKey string
-	// 桶刷新时间key
+	// 记录上一次请求时间的key
 	timestampKey string
 	// lock
 	rescueLock sync.Mutex
@@ -90,19 +90,21 @@ type TokenLimiter struct {
 	redisAlive uint32
 	// redis故障时采用进程内 令牌桶限流器
 	rescueLimiter *mrate.Limiter
+	// 部署限流器的机器个数，如果限流器降级到本地进程，则计算每台机器的限流速度和个数
+	localServerNum int
 	// redis监控探测任务标识
 	monitorStarted bool
 }
 
 // NewTokenLimiter 初始函数
 // limitServer -- 部署限流器机器个数，如果限流器降级到本地进程，则计算每台机器的限流速度和个数
-func NewTokenLimiter(rate, burst int, store *redis.Client, key string, limitServer int) *TokenLimiter {
+func NewTokenLimiter(rate, burst int, store *redis.Client, key string, localServerNum int) *TokenLimiter {
 	tokenKey := fmt.Sprintf(tokenFormat, key)
 	timestampKey := fmt.Sprintf(timestampFormat, key)
 
 	rageB := burst
-	if burst > limitServer {
-		rageB = burst / limitServer
+	if burst > localServerNum {
+		rageB = burst / localServerNum
 	}
 
 	return &TokenLimiter{
