@@ -3,7 +3,6 @@ package bloom
 import (
 	"context"
 	"errors"
-	"gitlab.bitkeep.tools/backend/golang/wallet-utxo-scanner/utils"
 	"strconv"
   "github.com/spaolacci/murmur3"
 	"github.com/redis/go-redis/v9"
